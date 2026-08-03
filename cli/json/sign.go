@@ -1,13 +1,11 @@
 package sub_json
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/thetayloredman/mfc/config"
-	"github.com/thetayloredman/mfc/crypto/ed25519"
 	"github.com/thetayloredman/mfc/crypto/jsonsigning"
 )
 
@@ -28,20 +26,12 @@ func NewSignCommand(cfg *config.Config) *cobra.Command {
 				return fmt.Errorf("failed to parse JSON: %v", err)
 			}
 
-			privateKeyBytes, err := base64.RawStdEncoding.DecodeString(cfg.Identity.PrivateKey)
+			signingKey, err := cfg.AsSigningKey()
 			if err != nil {
-				return fmt.Errorf("failed to decode private key: %v", err)
+				return fmt.Errorf("failed to get signing key: %v", err)
 			}
 
-			privateKey := ed25519.PrivateKey(privateKeyBytes)
-
-			key := jsonsigning.SigningKey{
-				ServerName: cfg.Identity.ServerName,
-				KeyID:      cfg.Identity.KeyId,
-				PrivateKey: privateKey,
-			}
-
-			signedJSON, err := jsonsigning.SignJSON(jsonData, key)
+			signedJSON, err := jsonsigning.SignJSON(jsonData, signingKey)
 			if err != nil {
 				return fmt.Errorf("failed to sign JSON: %v", err)
 			}

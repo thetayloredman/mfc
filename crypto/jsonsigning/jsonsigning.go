@@ -26,17 +26,26 @@ func signingObject(item map[string]any) map[string]any {
 	return m
 }
 
-func SignJSON(item map[string]any, key SigningKey) ([]byte, error) {
+func SignJSONGetSignature(item map[string]any, key SigningKey) (string, error) {
 	canonicalJSON, err := canonicaljson.Marshal(signingObject(item))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	signature := ed25519.Sign(key.PrivateKey, canonicalJSON)
 
+	return base64.RawStdEncoding.EncodeToString(signature), nil
+}
+
+func SignJSON(item map[string]any, key SigningKey) ([]byte, error) {
+	signature, err := SignJSONGetSignature(item, key)
+	if err != nil {
+		return nil, err
+	}
+
 	item["signatures"] = map[string]map[string]string{
 		key.ServerName: {
-			key.KeyID: base64.RawStdEncoding.EncodeToString(signature),
+			key.KeyID: base64.RawStdEncoding.EncodeToString([]byte(signature)),
 		},
 	}
 

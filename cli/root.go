@@ -16,6 +16,7 @@ func NewRootCommand(cfg *config.Config) *cobra.Command {
 	}
 
 	rootCmd.AddCommand(NewResolveCommand(cfg))
+	rootCmd.AddCommand(NewSendCommand(cfg))
 	rootCmd.AddCommand(sub_json.NewJsonCommand(cfg))
 
 	return rootCmd
