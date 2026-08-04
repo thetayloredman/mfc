@@ -1,8 +1,10 @@
 package sender
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/thetayloredman/mfc/resolver"
@@ -17,6 +19,21 @@ func (s *Sender) Get(destination, uri string) (respCode int, response map[string
 
 	resolved, err := resolver.Resolve(destination)
 
+	hostHeaderWithoutPort := resolved.HostHeader
+	if host, _, err := net.SplitHostPort(resolved.HostHeader); err == nil {
+		hostHeaderWithoutPort = host
+	}
+
+	tlsConfig := &tls.Config{
+		ServerName: hostHeaderWithoutPort,
+	}
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	client := &http.Client{
+		Transport: transport,
+	}
+
 	req, err := http.NewRequest("GET", "https://"+resolved.Endpoint+uri, nil)
 	if err != nil {
 		return 0, nil, err
@@ -26,10 +43,9 @@ func (s *Sender) Get(destination, uri string) (respCode int, response map[string
 	req.Header.Set("Content-Type", "application/json")
 	req.Host = resolved.HostHeader
 
-	fmt.Printf("sender: Sending GET %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.Endpoint)
+	fmt.Printf("sender: Sending GET %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.HostHeader)
 	fmt.Printf("sender: Authorization: %s\n", xmatrix)
 
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, nil, err
