@@ -1,4 +1,4 @@
-package keyfetcher
+package client
 
 import (
 	"encoding/base64"
@@ -24,6 +24,7 @@ func NewProvidedKeyFetcher(knownServerName string, knownServerKeys map[string]st
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode base64 key for server %s with key ID %s: %v", serverName, keyID, err)
 		}
+		fmt.Printf("keyfetcher/provided: Returning provided key for server %s with key ID %s: %x\n", serverName, keyID, decoded)
 
 		return ed25519.PublicKey(decoded), nil
 	}
