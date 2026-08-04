@@ -15,5 +15,6 @@
     in
     {
       devShells = forAllSystems (args: import ./nix/devshell.nix (inputs // args));
+      packages = forAllSystems (args: import ./nix/pkgs/default.nix (inputs // args));
     };
 }
