@@ -44,10 +44,14 @@ func (s *Sender) authorizeOutboundRequest(method, uri, destination string, body 
 		reqContentMap["content"] = reqContent.Content
 	}
 
+	fmt.Printf("sender/auth-out: Signing request content: %+v\n", reqContentMap)
+
 	signature, err := jsonsigning.SignJSONGetSignature(reqContentMap, s.identity)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign request content: %v", err)
 	}
+
+	fmt.Printf("sender/auth-out: Generated signature: %s\n", signature)
 
 	return "X-Matrix origin=\"" + s.identity.ServerName + "\",destination=\"" + destination + "\",key=\"" + s.identity.KeyID + "\",sig=\"" + signature + "\"", nil
 }

@@ -11,16 +11,16 @@ import (
 type ResolutionStep string
 
 const (
-	ResolutionStepIpLiteral             ResolutionStep = "1"
-	ResolutionStepHostPort              ResolutionStep = "2"
-	ResolutionStepWellKnownIpLiteral    ResolutionStep = "3.1"
-	ResolutionStepWellKnownHostPort     ResolutionStep = "3.2"
-	ResolutionStepWellKnownSrvMatrixFed ResolutionStep = "3.3"
-	ResolutionStepWellKnownSrvMatrix    ResolutionStep = "3.4"
-	ResolutionStepWellKnownDefaultPort  ResolutionStep = "3.5"
-	ResolutionStepSrvMatrixFed          ResolutionStep = "4"
-	ResolutionStepSrvMatrix             ResolutionStep = "5"
-	ResolutionStepDefaultPort           ResolutionStep = "6"
+	ResolutionStepIpLiteral             ResolutionStep = "1 (IpLiteral)"
+	ResolutionStepHostPort              ResolutionStep = "2 (HostPort)"
+	ResolutionStepWellKnownIpLiteral    ResolutionStep = "3.1 (WellKnownIpLiteral)"
+	ResolutionStepWellKnownHostPort     ResolutionStep = "3.2 (WellKnownHostPort)"
+	ResolutionStepWellKnownSrvMatrixFed ResolutionStep = "3.3 (WellKnownSrvMatrixFed)"
+	ResolutionStepWellKnownSrvMatrix    ResolutionStep = "3.4 (WellKnownSrvMatrix)"
+	ResolutionStepWellKnownDefaultPort  ResolutionStep = "3.5 (WellKnownDefaultPort)"
+	ResolutionStepSrvMatrixFed          ResolutionStep = "4 (SrvMatrixFed)"
+	ResolutionStepSrvMatrix             ResolutionStep = "5 (SrvMatrix)"
+	ResolutionStepDefaultPort           ResolutionStep = "6 (DefaultPort)"
 )
 
 type ResolvedDestination struct {
@@ -33,14 +33,18 @@ type ResolvedDestination struct {
 }
 
 func Resolve(serverName string) (*ResolvedDestination, error) {
+	fmt.Printf("resolver: Trying to resolve %s\n", serverName)
 	// 1. If the hostname is an IP literal, then that IP address should be used, together with the
 	// given port number, or 8448 if no port is given.
 	if isIpLiteral(serverName) {
+		fmt.Printf("resolver: 1. %s is an IP literal\n", serverName)
 		if host, port, err := net.SplitHostPort(serverName); err == nil {
 			// if it's IPv6, wrap it in [] for the host header
 			if isIp(host) && net.ParseIP(host).To4() == nil {
 				host = "[" + host + "]"
 			}
+
+			fmt.Printf("resolver:    ... using host %s and explicit port %s\n", host, port)
 
 			return &ResolvedDestination{
 				Endpoint:       serverName,
@@ -49,6 +53,8 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 			}, nil
 		}
 
+		fmt.Printf("resolver:    ... using host %s and default port 8448\n", serverName)
+
 		return &ResolvedDestination{
 			Endpoint:       serverName + ":8448",
 			HostHeader:     serverName,
@@ -56,20 +62,26 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		}, nil
 	}
 
+	fmt.Printf("resolver: 1. %s is not an IP literal\n", serverName)
+
 	// 2. If the hostname is not an IP literal, and the server name includes an explicit port,
 	// resolve the hostname to an IP address using CNAME, AAAA or A records.
 	if _, _, err := net.SplitHostPort(serverName); err == nil {
+		fmt.Printf("resolver: 2. %s includes an explicit port\n", serverName)
+		fmt.Printf("resolver:    ... using host %s and explicit port\n", serverName)
 		return &ResolvedDestination{
 			Endpoint:       serverName,
 			HostHeader:     serverName,
 			ResolutionStep: ResolutionStepHostPort,
 		}, nil
 	}
+	fmt.Printf("resolver: 2. %s does not include an explicit port\n", serverName)
 
 	// 3. a regular HTTPS request is made to https://<hostname>/.well-known/matrix/server
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
+	fmt.Printf("resolver: 3. Trying https://%s/.well-known/matrix/server\n", serverName)
 	resp, err := client.Get("https://" + serverName + "/.well-known/matrix/server")
 	if err == nil {
 		defer resp.Body.Close()
@@ -81,6 +93,8 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		jsonErr := json.NewDecoder(resp.Body).Decode(&jsonResp)
 
 		if resp.StatusCode == 200 && jsonErr == nil && jsonResp.DelegatedServerName != "" {
+			fmt.Printf("resolver:    Got 200 OK well-known response! Delegated to: %s\n", jsonResp.DelegatedServerName)
+
 			// 3.1. If it's an IP literal, use that or port 8448 if no port is given.
 			if isIpLiteral(jsonResp.DelegatedServerName) {
 				if host, port, err := net.SplitHostPort(jsonResp.DelegatedServerName); err == nil {
@@ -89,12 +103,16 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 						host = "[" + host + "]"
 					}
 
+					fmt.Printf("resolver:    3.1. Delegated server name %s is an IP literal with explicit port %s\n", host, port)
+
 					return &ResolvedDestination{
 						Endpoint:       jsonResp.DelegatedServerName,
 						HostHeader:     host + ":" + port,
 						ResolutionStep: ResolutionStepWellKnownIpLiteral,
 					}, nil
 				}
+
+				fmt.Printf("resolver:    3.1. Delegated server name %s is an IP literal with default port 8448\n", jsonResp.DelegatedServerName)
 
 				return &ResolvedDestination{
 					Endpoint:       jsonResp.DelegatedServerName + ":8448",
@@ -105,6 +123,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 
 			// 3.2. If the hostname includes an explicit port, resolve the hostname to an IP address using CNAME, AAAA or A records.
 			if _, _, err := net.SplitHostPort(jsonResp.DelegatedServerName); err == nil {
+				fmt.Printf("resolver:    3.2. Delegated server name %s includes an explicit port\n", jsonResp.DelegatedServerName)
 				return &ResolvedDestination{
 					Endpoint:       jsonResp.DelegatedServerName,
 					HostHeader:     jsonResp.DelegatedServerName,
@@ -113,6 +132,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 			}
 
 			// 3.3. Try _matrix-fed._tcp.<hostname>
+			fmt.Printf("resolver:          Trying SRVs...\n")
 			_, addrs, err := net.LookupSRV("matrix-fed", "tcp", jsonResp.DelegatedServerName)
 			if err == nil && len(addrs) > 0 {
 				// remove trailing . from the target if present
@@ -120,6 +140,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 				if len(target) > 0 && target[len(target)-1] == '.' {
 					target = target[:len(target)-1]
 				}
+				fmt.Printf("resolver:    3.3.  Found SRV record for %s: %s:%d\n", jsonResp.DelegatedServerName, target, addrs[0].Port)
 				return &ResolvedDestination{
 					Endpoint:       fmt.Sprintf("%s:%d", target, addrs[0].Port),
 					HostHeader:     jsonResp.DelegatedServerName,
@@ -135,12 +156,15 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 				if len(target) > 0 && target[len(target)-1] == '.' {
 					target = target[:len(target)-1]
 				}
+				fmt.Printf("resolver:    3.4.  Found legacy SRV record for %s: %s:%d\n", jsonResp.DelegatedServerName, target, addrs[0].Port)
 				return &ResolvedDestination{
 					Endpoint:       fmt.Sprintf("%s:%d", target, addrs[0].Port),
 					HostHeader:     jsonResp.DelegatedServerName,
 					ResolutionStep: ResolutionStepWellKnownSrvMatrix,
 				}, nil
 			}
+
+			fmt.Printf("resolver:    3.5.  No SRV records found for %s, using default port 8448\n", jsonResp.DelegatedServerName)
 
 			// 3.5. If all else fails, use the hostname with port 8448.
 			return &ResolvedDestination{
@@ -151,6 +175,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		}
 	}
 
+	fmt.Printf("resolver: 3. No well-known response for %s, trying SRVs...\n", serverName)
 	// 4. Try _matrix-fed._tcp.<hostname>
 	_, addrs, err := net.LookupSRV("matrix-fed", "tcp", serverName)
 	if err == nil && len(addrs) > 0 {
@@ -159,6 +184,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		if len(target) > 0 && target[len(target)-1] == '.' {
 			target = target[:len(target)-1]
 		}
+		fmt.Printf("resolver: 4. Found SRV record for %s: %s:%d\n", serverName, target, addrs[0].Port)
 		return &ResolvedDestination{
 			Endpoint:       fmt.Sprintf("%s:%d", target, addrs[0].Port),
 			HostHeader:     serverName,
@@ -174,6 +200,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		if len(target) > 0 && target[len(target)-1] == '.' {
 			target = target[:len(target)-1]
 		}
+		fmt.Printf("resolver: 5. Found legacy SRV record for %s: %s:%d\n", serverName, target, addrs[0].Port)
 		return &ResolvedDestination{
 			Endpoint:       fmt.Sprintf("%s:%d", target, addrs[0].Port),
 			HostHeader:     serverName,
@@ -181,6 +208,7 @@ func Resolve(serverName string) (*ResolvedDestination, error) {
 		}, nil
 	}
 
+	fmt.Printf("resolver: 5. No SRV records found for %s, using default port 8448\n", serverName)
 	// 6. If all else fails, use the hostname with port 8448.
 	return &ResolvedDestination{
 		Endpoint:       serverName + ":8448",

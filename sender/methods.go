@@ -27,7 +27,7 @@ func (s *Sender) Get(destination, uri string) (respCode int, response map[string
 	req.Host = resolved.HostHeader
 
 	fmt.Printf("sender: Sending GET %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.Endpoint)
-	fmt.Printf("sender: Authorization header: %s\n", xmatrix)
+	fmt.Printf("sender: Authorization: %s\n", xmatrix)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
