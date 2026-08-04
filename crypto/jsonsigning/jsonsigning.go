@@ -66,8 +66,10 @@ func VerifyJSON(item map[string]any, serverName string, keyFetcher KeyFetcher) e
 	wasAbleToFindKey := false
 
 	for keyID, signatureB64 := range serverSignatures {
+		fmt.Printf("jsonsigning: Verifying signature for server %s with key ID %s\n", serverName, keyID)
 		publicKey, err := keyFetcher(serverName, keyID)
 		if err != nil {
+			fmt.Printf("jsonsigning: Failed to fetch public key for server %s with key ID %s: %v\n", serverName, keyID, err)
 			continue
 		}
 		wasAbleToFindKey = true
@@ -91,6 +93,8 @@ func VerifyJSON(item map[string]any, serverName string, keyFetcher KeyFetcher) e
 	if !wasAbleToFindKey {
 		return fmt.Errorf("no valid keys found for server: %s", serverName)
 	}
+
+	fmt.Printf("jsonsigning: Successfully verified signature for server %s\n", serverName)
 
 	return nil
 }

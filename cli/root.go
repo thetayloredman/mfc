@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 	sub_json "github.com/thetayloredman/mfc/cli/json"
+	sub_key "github.com/thetayloredman/mfc/cli/key"
 	"github.com/thetayloredman/mfc/config"
 )
 
@@ -18,6 +19,7 @@ func NewRootCommand(cfg *config.Config) *cobra.Command {
 	rootCmd.AddCommand(NewResolveCommand(cfg))
 	rootCmd.AddCommand(NewSendCommand(cfg))
 	rootCmd.AddCommand(sub_json.NewJsonCommand(cfg))
+	rootCmd.AddCommand(sub_key.NewKeyCommand(cfg))
 
 	return rootCmd
 }

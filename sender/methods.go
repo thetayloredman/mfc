@@ -54,6 +54,7 @@ func (s *Sender) Get(destination, uri string) (respCode int, response map[string
 
 	var jsonResp map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&jsonResp)
+	fmt.Printf("sender: Received response: %d %+v\n", resp.StatusCode, jsonResp)
 	if err != nil {
 		return 0, nil, err
 	}
