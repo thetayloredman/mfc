@@ -16,6 +16,7 @@ func NewKeyCommand(cfg *config.Config) *cobra.Command {
 
 	keyCmd.AddCommand(NewQueryDirectlyCommand(cfg))
 	keyCmd.AddCommand(NewQueryRemoteCommand(cfg))
+	keyCmd.AddCommand(NewRespondCommand(cfg))
 
 	return keyCmd
 }

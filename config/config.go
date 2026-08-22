@@ -21,7 +21,7 @@ type Config struct {
 	Identity ConfigIdentity `toml:"identity"`
 }
 
-func getConfigPath() string {
+func GetConfigPath() string {
 	if path := os.Getenv("MFC_CONFIG_PATH"); path != "" {
 		return path
 	}
@@ -29,7 +29,7 @@ func getConfigPath() string {
 }
 
 func LoadConfig() (*Config, error) {
-	configPath := getConfigPath()
+	configPath := GetConfigPath()
 
 	var config Config
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
