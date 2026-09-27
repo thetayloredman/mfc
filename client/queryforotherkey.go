@@ -7,7 +7,9 @@ import (
 	"github.com/thetayloredman/mfc/crypto/jsonsigning"
 )
 
-type SpecificKeyRequests map[string]struct{}
+type SpecificKeyRequests map[string]struct {
+	MinimumValidUntilTs int64 `json:"minimum_valid_until_ts"`
+}
 
 type NotaryKeyRequest struct {
 	ServerKeys map[string]SpecificKeyRequests `json:"server_keys"`
@@ -92,7 +94,10 @@ func (c *Client) QueryForOtherKeysSpecific(notaryServer string, desiredServer st
 	request := NotaryKeyRequest{
 		ServerKeys: map[string]SpecificKeyRequests{
 			desiredServer: {
-				desiredKey: {},
+				desiredKey: {
+					// this field is meant to be optional, but not according to synapse
+					MinimumValidUntilTs: 0,
+				},
 			},
 		},
 	}

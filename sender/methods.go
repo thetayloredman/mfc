@@ -98,6 +98,7 @@ func (s *Sender) Post(destination, uri string, body []byte) (respCode int, respo
 
 	fmt.Printf("sender: Sending POST %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.HostHeader)
 	fmt.Printf("sender: Authorization: %s\n", xmatrix)
+	fmt.Printf("sender: Body: %s\n", string(body))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -150,6 +151,7 @@ func (s *Sender) Put(destination, uri string, body []byte) (respCode int, respon
 
 	fmt.Printf("sender: Sending PUT %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.HostHeader)
 	fmt.Printf("sender: Authorization: %s\n", xmatrix)
+	fmt.Printf("sender: Body: %s\n", string(body))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -254,6 +256,7 @@ func (s *Sender) Patch(destination, uri string, body []byte) (respCode int, resp
 
 	fmt.Printf("sender: Sending PATCH %s%s (host: %s)\n", resolved.Endpoint, uri, resolved.HostHeader)
 	fmt.Printf("sender: Authorization: %s\n", xmatrix)
+	fmt.Printf("sender: Body: %s\n", string(body))
 
 	resp, err := client.Do(req)
 	if err != nil {
